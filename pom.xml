@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.yestech.maven</groupId>
     <artifactId>maven-hibernate-search</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>maven-plugin</packaging>
-    <name>maven-hibernate-search Maven Mojo</name>
-    <url>http://maven.apache.org</url>
+    <name>Hibernate Search Maven Mojo</name>
+    <url>http://yestech.org</url>
     <dependencies>
         <dependency>
             <groupId>org.apache.maven</groupId>
@@ -82,8 +82,8 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <source>1.5</source>
-                        <target>1.5</target>
+                        <source>1.6</source>
+                        <target>1.6</target>
                     </configuration>
                 </plugin>
             </plugins>
