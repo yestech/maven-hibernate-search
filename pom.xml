@@ -89,6 +89,36 @@
             </plugins>
         </pluginManagement>
     </build>
+    <repositories>
+        <repository>
+            <id>jboss</id>
+            <url>http://repository.jboss.com/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>jboss-snapshot</id>
+            <url>http://snapshots.jboss.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>yes-thirdparty</id>
+            <url>http://repo.yestech.org/content/repositories/thirdparty</url>
+        </repository>
+        <repository>
+            <id>yes-snapshots</id>
+            <url>http://repo.yestech.org/content/groups/public-snapshots/</url>
+        </repository>
+    </repositories>
     <distributionManagement>
         <repository>
             <id>yestech.release</id>
