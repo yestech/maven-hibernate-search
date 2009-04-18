@@ -42,7 +42,7 @@ import java.util.Map;
  * @goal index
  * @phase test
  */
-public class BuildIndexesMojo extends AbstractMojo
+public class HibernateSearchBuildIndexesMojo extends AbstractMojo
 {
 
     /**
@@ -74,6 +74,12 @@ public class BuildIndexesMojo extends AbstractMojo
      * @required
      */
     private String dialect;
+
+    /**
+     * @parameter
+     * @required
+     */
+    private String indexDir;
 
     /**
      * @parameter
@@ -112,6 +118,7 @@ public class BuildIndexesMojo extends AbstractMojo
             Configuration configuration = new AnnotationConfiguration();
             configuration = configuration.configure(config);
             configuration.setProperty("hibernate.dialect", dialect);
+            configuration.setProperty("hibernate.index.dir", indexDir);
 
             SessionFactory sessionFactory = configuration.buildSessionFactory();
             Session session = sessionFactory.openSession(con);
