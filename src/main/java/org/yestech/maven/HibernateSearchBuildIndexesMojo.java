@@ -19,6 +19,7 @@ package org.yestech.maven;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.apache.commons.lang.StringUtils;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.cfg.AnnotationConfiguration;
@@ -71,15 +72,19 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
 
     /**
      * @parameter
-     * @required
      */
     private String dialect;
 
     /**
      * @parameter
-     * @required
      */
     private String indexDir;
+
+
+    /**
+     * @parameter
+     */
+    private String directoryProvider;
 
     /**
      * @parameter
@@ -117,8 +122,15 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
 
             Configuration configuration = new AnnotationConfiguration();
             configuration = configuration.configure(config);
-            configuration.setProperty("hibernate.dialect", dialect);
-            configuration.setProperty("hibernate.index.dir", indexDir);
+            if (StringUtils.isNotBlank(dialect)) {
+                configuration.setProperty("hibernate.dialect", dialect);
+            }
+            if (StringUtils.isNotBlank(indexDir)) {
+                configuration.setProperty("hibernate.index.dir", indexDir);
+            }
+            if (StringUtils.isNotBlank(directoryProvider)) {
+                configuration.setProperty("hibernate.search.default.directory_provider", directoryProvider);
+            }
 
             SessionFactory sessionFactory = configuration.buildSessionFactory();
             Session session = sessionFactory.openSession(con);
