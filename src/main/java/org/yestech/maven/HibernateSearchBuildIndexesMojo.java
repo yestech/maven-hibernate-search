@@ -126,6 +126,10 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
                 configuration.setProperty("hibernate.dialect", dialect);
             }
             if (StringUtils.isNotBlank(indexDir)) {
+                File dir = new File(indexDir);
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
                 configuration.setProperty("hibernate.index.dir", indexDir);
             }
             if (StringUtils.isNotBlank(directoryProvider)) {
