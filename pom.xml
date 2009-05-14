@@ -7,6 +7,9 @@
     <packaging>maven-plugin</packaging>
     <name>Hibernate Search Maven Mojo</name>
     <url>http://yestech.org</url>
+    <properties>
+        <slf4j.version>1.5.6</slf4j.version>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.apache.maven</groupId>
@@ -58,16 +61,22 @@
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>3.3.1.GA</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.5.6</version>
+            <version>${slf4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
-            <version>1.5.6</version>
+            <version>${slf4j.version}</version>
         </dependency>
         <dependency>
             <groupId>commons-collections</groupId>
