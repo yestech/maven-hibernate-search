@@ -22,12 +22,14 @@ import org.apache.maven.project.MavenProject;
 import org.apache.commons.lang.StringUtils;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.hibernate.EntityMode;
 import org.hibernate.cfg.AnnotationConfiguration;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.classic.Session;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.search.FullTextSession;
 import org.hibernate.search.Search;
+import org.hibernate.search.annotations.Indexed;
 
 import java.io.File;
 import java.net.URL;
@@ -144,13 +146,18 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
 
             Map<String, ClassMetadata> metadata = sessionFactory.getAllClassMetadata();
 
-            for (String entityName : metadata.keySet())
+            for (Map.Entry<String,ClassMetadata> entry : metadata.entrySet())
             {
-                String hql = "from " + entityName;
-                List<?> list = session.createQuery(hql).list();
-                for (Object o : list)
-                {
-                    fullTextSession.index(o);
+
+                Class clazz = entry.getValue().getMappedClass(EntityMode.POJO);
+
+                if (clazz.isAnnotationPresent(Indexed.class)) {
+                    String hql = "from " + entry.getKey();
+                    List<?> list = session.createQuery(hql).list();
+                    for (Object o : list)
+                    {
+                        fullTextSession.index(o);
+                    }
                 }
             }
 
