@@ -152,6 +152,7 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
                 Class clazz = entry.getValue().getMappedClass(EntityMode.POJO);
 
                 if (clazz.isAnnotationPresent(Indexed.class)) {
+                    getLog().info("Indexing "+entry);
                     String hql = "from " + entry.getKey();
                     List<?> list = session.createQuery(hql).list();
                     for (Object o : list)
