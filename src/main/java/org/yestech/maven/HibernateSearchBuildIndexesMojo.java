@@ -20,9 +20,12 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.io.FileUtils;
+import static org.apache.commons.io.FileUtils.forceDelete;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.EntityMode;
+import org.hibernate.Criteria;
 import org.hibernate.cfg.AnnotationConfiguration;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.classic.Session;
@@ -32,6 +35,7 @@ import org.hibernate.search.Search;
 import org.hibernate.search.annotations.Indexed;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Connection;
@@ -43,10 +47,10 @@ import java.util.Map;
  * Goal which touches a timestamp file.
  *
  * @goal index
- * @phase test
+ * @phase process-test-resources
  */
-public class HibernateSearchBuildIndexesMojo extends AbstractMojo
-{
+@SuppressWarnings({"UnusedDeclaration"})
+public class HibernateSearchBuildIndexesMojo extends AbstractMojo {
 
     /**
      * @parameter
@@ -79,6 +83,7 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
 
     /**
      * @parameter
+     * @required
      */
     private String indexDir;
 
@@ -94,6 +99,17 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
      */
     private File config;
 
+
+    /**
+     * @parameter
+     */
+    private boolean drop = true;
+
+    /**
+     * @parameter expression="${maven.test.skip}"
+     */
+    private boolean skip;
+
     /**
      * <i>Maven Internal</i>: Project to interact with.
      *
@@ -105,19 +121,20 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
     private MavenProject project;
 
 
-    @SuppressWarnings({"unchecked"})
-    public void execute() throws MojoExecutionException
-    {
+    public void execute() throws MojoExecutionException {
+
+        if (skip) {
+            getLog().info("Skipping search index population");
+            return;
+        }
 
         Thread thread = Thread.currentThread();
         ClassLoader oldClassLoader = thread.getContextClassLoader();
         thread.setContextClassLoader(getClassLoader());
 
-
         FullTextSession fullTextSession = null;
         Connection con = null;
-        try
-        {
+        try {
 
             Class.forName(driver);
             con = java.sql.DriverManager.getConnection(url, username, password);
@@ -127,64 +144,29 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
             if (StringUtils.isNotBlank(dialect)) {
                 configuration.setProperty("hibernate.dialect", dialect);
             }
-            if (StringUtils.isNotBlank(indexDir)) {
-                File dir = new File(indexDir);
-                if (!dir.exists()) {
-                    dir.mkdirs();
-                }
-                configuration.setProperty("hibernate.index.dir", indexDir);
-            }
+
+            prepareIndexDir(configuration);
+
             if (StringUtils.isNotBlank(directoryProvider)) {
                 configuration.setProperty("hibernate.search.default.directory_provider", directoryProvider);
             }
 
-            SessionFactory sessionFactory = configuration.buildSessionFactory();
-            Session session = sessionFactory.openSession(con);
-            fullTextSession = Search.getFullTextSession(session);
-
-            Transaction tx = fullTextSession.beginTransaction();
-
-            Map<String, ClassMetadata> metadata = sessionFactory.getAllClassMetadata();
-
-            for (Map.Entry<String,ClassMetadata> entry : metadata.entrySet())
-            {
-
-                Class clazz = entry.getValue().getMappedClass(EntityMode.POJO);
-
-                if (clazz.isAnnotationPresent(Indexed.class)) {
-                    getLog().info("Indexing "+entry);
-                    String hql = "from " + entry.getKey();
-                    List<?> list = session.createQuery(hql).list();
-                    for (Object o : list)
-                    {
-                        fullTextSession.index(o);
-                    }
-                }
-            }
-
-            tx.commit();
+            fullTextSession = processObjects(fullTextSession, con, configuration);
         }
-        catch (Exception e)
-        {
-            throw new MojoExecutionException("Build ", e);
-
+        catch (Exception e) {
+            throw new MojoExecutionException("Build " + e.getMessage(), e);
         }
-        finally
-        {
-            if (fullTextSession != null)
-            {
+        finally {
+            if (fullTextSession != null) {
                 fullTextSession.flushToIndexes();
                 fullTextSession.flush();
                 fullTextSession.close();
             }
-            if (con != null)
-            {
-                try
-                {
+            if (con != null) {
+                try {
                     con.close();
                 }
-                catch (SQLException e)
-                {
+                catch (SQLException e) {
                     getLog().error(e);
                 }
             }
@@ -193,28 +175,72 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo
 
     }
 
+    @SuppressWarnings({"unchecked"})
+    private FullTextSession processObjects(FullTextSession fullTextSession, Connection con, Configuration configuration) {
+        SessionFactory sessionFactory = configuration.buildSessionFactory();
+        Session session = sessionFactory.openSession(con);
+        fullTextSession = Search.getFullTextSession(session);
+
+        Transaction tx = fullTextSession.beginTransaction();
+
+        Map<String, ClassMetadata> metadata = sessionFactory.getAllClassMetadata();
+
+        for (Map.Entry<String, ClassMetadata> entry : metadata.entrySet()) {
+
+            Class clazz = entry.getValue().getMappedClass(EntityMode.POJO);
+
+            if (clazz.isAnnotationPresent(Indexed.class)) {
+                getLog().info("Indexing " + entry);
+
+                Criteria criteria = session.createCriteria(clazz);
+                criteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+
+                List<?> list = criteria.list();
+                for (Object o : list) {
+                    fullTextSession.index(o);
+                }
+            }
+        }
+
+        tx.commit();
+        return fullTextSession;
+    }
+
+    private void prepareIndexDir(Configuration configuration) throws IOException {
+        File dir = new File(indexDir);
+
+        if (drop && dir.exists()) {
+            getLog().info("Dropping Index Directory: "+indexDir);
+            forceDelete(dir);
+        }
+
+
+        if (!dir.exists()) {
+            getLog().info("Creating Index Directory: "+indexDir);
+            //noinspection ResultOfMethodCallIgnored
+            dir.mkdirs();
+        }
+        configuration.setProperty("hibernate.index.dir", indexDir);
+    }
+
     /**
      * Returns the an isolated classloader.
      *
      * @return ClassLoader
      * @noinspection unchecked
      */
-    private ClassLoader getClassLoader()
-    {
-        try
-        {
+    private ClassLoader getClassLoader() {
+        try {
             List classpathElements = project.getCompileClasspathElements();
             classpathElements.add(project.getBuild().getOutputDirectory());
             classpathElements.add(project.getBuild().getTestOutputDirectory());
             URL urls[] = new URL[classpathElements.size()];
-            for (int i = 0; i < classpathElements.size(); ++i)
-            {
+            for (int i = 0; i < classpathElements.size(); ++i) {
                 urls[i] = new File((String) classpathElements.get(i)).toURL();
             }
             return new URLClassLoader(urls, this.getClass().getClassLoader());
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             getLog().debug("Couldn't get the classloader.");
             return this.getClass().getClassLoader();
         }
