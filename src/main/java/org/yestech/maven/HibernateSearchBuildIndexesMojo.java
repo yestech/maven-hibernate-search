@@ -32,6 +32,7 @@ import org.hibernate.classic.Session;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.search.FullTextSession;
 import org.hibernate.search.Search;
+import org.hibernate.search.store.DirectoryProvider;
 import org.hibernate.search.annotations.Indexed;
 
 import java.io.File;
@@ -181,8 +182,6 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo {
         Session session = sessionFactory.openSession(con);
         fullTextSession = Search.getFullTextSession(session);
 
-        Transaction tx = fullTextSession.beginTransaction();
-
         Map<String, ClassMetadata> metadata = sessionFactory.getAllClassMetadata();
 
         for (Map.Entry<String, ClassMetadata> entry : metadata.entrySet()) {
@@ -192,17 +191,24 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo {
             if (clazz.isAnnotationPresent(Indexed.class)) {
                 getLog().info("Indexing " + entry);
 
-                Criteria criteria = session.createCriteria(clazz);
+                Transaction tx = fullTextSession.beginTransaction();
+                Criteria criteria = fullTextSession.createCriteria(clazz);
                 criteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+
+                DirectoryProvider[] providers = fullTextSession.getSearchFactory().getDirectoryProviders(clazz);
+                for (DirectoryProvider provider : providers) {
+                    getLog().info("Index directory: "+provider.getDirectory());
+                }
 
                 List<?> list = criteria.list();
                 for (Object o : list) {
                     fullTextSession.index(o);
                 }
+                fullTextSession.flushToIndexes();
+                tx.commit();
             }
         }
 
-        tx.commit();
         return fullTextSession;
     }
 
@@ -220,7 +226,10 @@ public class HibernateSearchBuildIndexesMojo extends AbstractMojo {
             //noinspection ResultOfMethodCallIgnored
             dir.mkdirs();
         }
-        configuration.setProperty("hibernate.index.dir", indexDir);
+        if (!dir.exists()) {
+            throw new IOException("failed to create directory");
+        }
+        configuration.setProperty("hibernate.search.default.indexBase", indexDir);
     }
 
     /**
