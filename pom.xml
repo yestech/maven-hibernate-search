@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.yestech.maven</groupId>
     <artifactId>maven-hibernate-search</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.2.0-SNAPSHOT</version>
     <packaging>maven-plugin</packaging>
     <name>Hibernate Search Maven Mojo</name>
     <url>http://yestech.org/sites/maven-hibernate-search/</url>
@@ -11,7 +11,7 @@
     <parent>
         <groupId>org.yestech</groupId>
         <artifactId>yessuperpom</artifactId>
-        <version>1.1.0</version>
+        <version>1.2.0</version>
     </parent>
     <scm>
         <connection>scm:git:git://github.com/yestech/maven-hibernate-search.git</connection>
