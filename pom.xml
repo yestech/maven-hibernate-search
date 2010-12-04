@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.yestech.maven</groupId>
     <artifactId>maven-hibernate-search</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0-SNAPSHOT</version>
     <packaging>maven-plugin</packaging>
     <name>Hibernate Search Maven Mojo</name>
     <url>http://yestech.org/sites/maven-hibernate-search/</url>
